@@ -6,6 +6,7 @@ import time
 
 zonky_url="https://api.zonky.cz"
 token=None
+test=False
 
 def download_file(url, local_filename ,headers = None):
     # NOTE the stream=True parameter
@@ -25,13 +26,19 @@ def download(endpoint,filename=None, sms=None):
     
     resp=requests.post(url,headers={'Authorization': f"Bearer {token}"})
     while True:        
-        if resp.status_code==204:
+        if resp.status_code==204 and not test:
             break
         if resp.status_code==401:
             print("Cannot download investments because of missing SCOPE_INVESTMENT_READ")
             return
+        if resp.status_code==400:
+            print("Investments: Token is invalid")
+            return
         if not resp.status_code in [202,204]:
             raise ValueError(resp)
+        if test:
+            print("Investments are OK")
+            return
         resp=requests.get(url,headers={'Authorization': f"Bearer {token}"})
         time.sleep(60)
 
@@ -52,8 +59,15 @@ def download_notifications(filename='notification.json'):
         if resp.status_code==401:
             print("Cannot download notifications because of missing SCOPE_NOTIFICATIONS_READ")
             return
+        if resp.status_code==400:
+            print("Notifications: Token is invalid")
+            return
         else:
             raise ValueError(resp)
+
+    if test:
+        print("Notifications are OK")            
+        return
 
     download_file(url,headers={'Authorization': f"Bearer {token}", 'X-Size': resp.headers['X-Total']},local_filename = filename)
 
@@ -64,12 +78,34 @@ def download_stats(filename='statistics.json'):
         if resp.status_code==401 or resp.status_code==403:
             print("Cannot download statistics because of missing SCOPE_NOTIFICATIONS_READ")
             return
+        if resp.status_code==400:
+            print("statistics: Token is invalid")
+            return
         else:
             raise ValueError(resp)
 
+    if test:
+        print("statistics are OK")            
+        return
 
     download_file(url,headers={'Authorization': f"Bearer {token}"},local_filename = filename)
 
+def check_token():
+    global test
+    test=True
+    download_stats(None)
+    download_notifications(None)
+    download('users/me/investments/export', None)
+
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -77,6 +113,9 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--investments', help="namefile for investments  (investments.xlsx)")
     parser.add_argument('-n', '--notifications', help="namefile for notifications  (notifications.json)")
     parser.add_argument('-o', '--overview', help="file for statistics overview (statistics.json)")
+    parser.add_argument('-c', "--check", type=str2bool, nargs='?',
+                        const=True, default=False,
+                        help="Validate token")
     #parser.add_argument('-w', '--wallet', help="file for wallet (transactions.xlsx)")
     #parser.add_argument('-s', '--sms', default=None, help="sms code for transactions")
 
@@ -84,6 +123,8 @@ if __name__ == "__main__":
     
     token=args.token
     
+    if args.check:
+        check_token()        
     if args.investments:
         print(f"downloading investments to {args.investments}")
         download('users/me/investments/export', args.investments)

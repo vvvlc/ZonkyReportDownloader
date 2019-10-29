@@ -11,6 +11,25 @@ zonky-downloader.py: error: the following arguments are required: -t/--token
 
 There are some alternative to download reports from Zonky, without using password
 
+## Check token
+succesfull authentication
+```sh
+./zonky-downloader.py -t ********-****-****-****-************ -c
+statistics are OK
+Notifications are OK
+https://api.zonky.cz/users/me/investments/export
+Investments are OK
+```
+
+failed authentication 
+```sh
+./zonky-downloader.py -t ********-****-****-****-************ -c
+statistics: Token is invalid
+Notifications: Token is invalid
+https://api.zonky.cz/users/me/investments/export
+Investments: Token is invalid
+```
+
 ## Download reports from Zonky integration with zotok
 ```sh
 cd zotok
